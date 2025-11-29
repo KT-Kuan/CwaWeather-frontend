@@ -115,53 +115,60 @@
       margin: 0 auto;
     }
 
-    /* 城市 tabs：切換不同地區（台北、花蓮...） */
-    .city-tabs {
-      display: flex;
-      gap: 8px;
-      overflow-x: auto;
-      padding-bottom: 8px;
-      margin-bottom: 14px;
-      scrollbar-width: none;
-      -ms-overflow-style: none;
-    }
+   /* 城市 tabs：切換不同地區（台北、花蓮...） */
+.city-tabs {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding: 8px 12px;
+  margin: 0 -8px 16px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 
-    .city-tabs::-webkit-scrollbar {
-      display: none;
-    }
+  /* 整條 tabs 的底色 & 圓角，讓它像一整排卡片 */
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.06), rgba(0, 0, 0, 0.25));
+  border-radius: 999px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+}
 
-    .city-tab {
-      border: 0;
-      outline: none;
-      padding: 6px 14px;
-      border-radius: 999px;
-      background: rgba(255, 255, 255, 0.1);
-      color: rgba(255, 255, 255, 0.85);
-      font-size: 0.85rem;
-      font-weight: 700;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      transition: transform 0.15s ease, box-shadow 0.15s ease,
-        background 0.15s ease, color 0.15s ease;
-      white-space: nowrap;
-    }
+.city-tabs::-webkit-scrollbar {
+  display: none;
+}
 
-    .city-tab span {
-      font-size: 1.1rem;
-    }
+.city-tab {
+  border: 0;
+  outline: none;
+  padding: 8px 18px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: none;
+  cursor: pointer;
+  flex: 0 0 auto;          /* 每個 tab 根據內容寬度，不會被擠扁 */
+  text-align: center;
 
-    .city-tab.active {
-      background: linear-gradient(120deg, var(--ac-hot-pink), var(--ac-blue));
-      color: var(--ac-brown);
-      box-shadow:
-        0 0 12px rgba(255, 107, 181, 0.7),
-        0 0 20px rgba(125, 225, 255, 0.5);
-      transform: translateY(-1px);
-    }
+  transition:
+    background 0.18s ease,
+    color 0.18s ease,
+    box-shadow 0.18s ease,
+    transform 0.12s ease;
+}
+
+.city-tab:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.35);
+}
+
+.city-tab.active {
+  background: linear-gradient(135deg, var(--ac-hot-pink), var(--ac-blue));
+  color: var(--ac-brown);
+  box-shadow:
+    0 0 12px rgba(255, 107, 181, 0.8),
+    0 0 20px rgba(125, 225, 255, 0.6);
+}
 
     /* === 核心：今日焦點卡片 === */
     .hero-card {
@@ -497,6 +504,7 @@
     // 第二階段：多城市打不同 API，依照氣象局 locationName
     const API_BASE = "https://kt-weather.zeabur.app/api/weather?locationName=";
     const DEFAULT_CITY = "taipei";
+    let hasLoadedOnce = false; // ✅ 是否已經載入過一次
 
     const CITY_NAMES = {
       taipei: "臺北市",
@@ -650,41 +658,57 @@
     }
 
     async function fetchWeather(cityId) {
-      try {
-        const loadingEl = document.getElementById('loading');
-        const mainEl = document.getElementById('mainContent');
+  try {
+    const loadingEl = document.getElementById('loading');
+    const mainEl = document.getElementById('mainContent');
 
-        const cityKey = cityId || DEFAULT_CITY;
-        const locationName = CITY_NAMES[cityKey] || CITY_NAMES[DEFAULT_CITY];
+    const cityKey = cityId || DEFAULT_CITY;
+    const locationName = CITY_NAMES[cityKey] || CITY_NAMES[DEFAULT_CITY];
 
-        // 組出實際要打的網址，例如：
-        // https://kt-weather.zeabur.app/api/weather?locationName=%E8%87%BA%E5%8C%97%E5%B8%82
-        const url = API_BASE + encodeURIComponent(locationName);
-        console.log("Fetching weather:", url);
+    const url = API_BASE + encodeURIComponent(locationName);
+    console.log("Fetching weather:", url);
 
-        // 顯示 loading
-        loadingEl.style.display = 'flex';
-        mainEl.style.display = 'none';
-
-        const delayPromise = new Promise(resolve => setTimeout(resolve, 1500));
-        const fetchPromise = fetch(url).then(res => res.json());
-
-        const [_, json] = await Promise.all([delayPromise, fetchPromise]);
-
-        if (json.success) {
-          renderWeather(json.data);
-
-          loadingEl.style.display = 'none';
-          mainEl.style.display = 'block';
-        } else {
-          console.error("API 回傳格式錯誤：", json);
-          throw new Error("API Error");
-        }
-      } catch (e) {
-        console.error(e);
-        alert("天氣資料讀取失敗，今天的肌肉魔法暫時被網路妖精封印了！");
-      }
+    // ✅ 只有第一次載入才顯示全螢幕 loading
+    if (!hasLoadedOnce) {
+      loadingEl.style.display = 'flex';
+      mainEl.style.display = 'none';
+    } else {
+      // 之後切城市：維持畫面，只在右上角顯示更新中
+      loadingEl.style.display = 'none';
+      mainEl.style.display = 'block';
+      const updateEl = document.getElementById('updateTime');
+      if (updateEl) updateEl.textContent = '更新中...';
     }
+
+    // ✅ 只有第一次載入才故意 delay 1.5 秒
+    const delayPromise = hasLoadedOnce
+      ? Promise.resolve()
+      : new Promise(resolve => setTimeout(resolve, 1500));
+
+    const fetchPromise = fetch(url).then(res => res.json());
+
+    const [_, json] = await Promise.all([delayPromise, fetchPromise]);
+
+    if (json.success) {
+      renderWeather(json.data);
+
+      // 第一次成功後把旗標打開
+      if (!hasLoadedOnce) {
+        hasLoadedOnce = true;
+      }
+
+      loadingEl.style.display = 'none';
+      mainEl.style.display = 'block';
+    } else {
+      console.error("API 回傳格式錯誤：", json);
+      throw new Error("API Error");
+    }
+  } catch (e) {
+    console.error(e);
+    alert("天氣資料讀取失敗，今天的肌肉魔法暫時被網路妖精封印了！");
+  }
+}
+
 
     function setupCityTabs() {
       const tabs = document.querySelectorAll('.city-tab');
