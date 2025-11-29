@@ -7,10 +7,10 @@
         content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>K-Kuan天氣預報站</title>
 
-  <!-- ❗實際使用時，請把 icon-v2.png 換成你的「肌肉魔法使」風格 icon 檔 -->
+  <!-- ❗實際使用時，請把 muscle.jpeg 換成你的「肌肉魔法使」風格 icon 檔 -->
   <link rel="icon" type="image/png" href="./muscle.jpeg">
   <link rel="apple-touch-icon" href="./muscle.jpeg">
-  <link rel="apple-touch-icon" sizes="180x180" href=".muscle.jpeg">
+  <link rel="apple-touch-icon" sizes="180x180" href="./muscle.jpeg">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -458,30 +458,31 @@
 
   <div class="container" id="mainContent" style="display: none;">
 
-    <!-- 城市切換 tabs -->
-    <div class="city-tabs" id="cityTabs">
-      <button class="city-tab active" data-city="taipei">
-        <span>💪</span> 台北
-      </button>
-      <button class="city-tab" data-city="taichung">
-        <span>✨</span> 台中
-      </button>
-      <button class="city-tab" data-city="chiayi">
-        <span>🏋️‍♂️</span> 嘉義
-      </button>
-      <button class="city-tab" data-city="tainan">
-        <span>🔥</span> 台南
-      </button>
-      <button class="city-tab" data-city="kaohsiung">
-        <span>⚡</span> 高雄
-      </button>
-      <button class="city-tab" data-city="pingtung">
-        <span>🌴</span> 屏東
-      </button>
-      <button class="city-tab" data-city="hualien">
-        <span>🌊</span> 花蓮
-      </button>
-    </div>
+<!-- 城市切換 tabs -->
+<div class="city-tabs" id="cityTabs">
+  <button class="city-tab active" data-city="taipei">
+    台北
+  </button>
+  <button class="city-tab" data-city="taichung">
+    台中
+  </button>
+  <button class="city-tab" data-city="chiayi">
+    嘉義
+  </button>
+  <button class="city-tab" data-city="tainan">
+    台南
+  </button>
+  <button class="city-tab" data-city="kaohsiung">
+    高雄
+  </button>
+  <button class="city-tab" data-city="pingtung">
+    屏東
+  </button>
+  <button class="city-tab" data-city="hualien">
+    花蓮
+  </button>
+</div>
+
 
     <div id="heroCard"></div>
 
@@ -493,17 +494,18 @@
   </div>
 
   <script>
-    const API_BASE = "https://kt-weather.zeabur.app/api/weather/";
+    // 第二階段：多城市打不同 API，依照氣象局 locationName
+    const API_BASE = "https://kt-weather.zeabur.app/api/weather?locationName=";
     const DEFAULT_CITY = "taipei";
 
     const CITY_NAMES = {
-      taipei: "台北",
-      taichung: "台中",
-      chiayi: "嘉義",
-      tainan: "台南",
-      kaohsiung: "高雄",
-      pingtung: "屏東",
-      hualien: "花蓮"
+      taipei: "臺北市",
+      taichung: "臺中市",
+      chiayi: "嘉義市",
+      tainan: "臺南市",
+      kaohsiung: "高雄市",
+      pingtung: "屏東縣",
+      hualien: "花蓮縣"
     };
 
     // 這裡仍保留天氣 icon（小卡用）
@@ -652,12 +654,20 @@
         const loadingEl = document.getElementById('loading');
         const mainEl = document.getElementById('mainContent');
 
+        const cityKey = cityId || DEFAULT_CITY;
+        const locationName = CITY_NAMES[cityKey] || CITY_NAMES[DEFAULT_CITY];
+
+        // 組出實際要打的網址，例如：
+        // https://kt-weather.zeabur.app/api/weather?locationName=%E8%87%BA%E5%8C%97%E5%B8%82
+        const url = API_BASE + encodeURIComponent(locationName);
+        console.log("Fetching weather:", url);
+
         // 顯示 loading
         loadingEl.style.display = 'flex';
         mainEl.style.display = 'none';
 
         const delayPromise = new Promise(resolve => setTimeout(resolve, 1500));
-        const fetchPromise = fetch(API_BASE + cityId).then(res => res.json());
+        const fetchPromise = fetch(url).then(res => res.json());
 
         const [_, json] = await Promise.all([delayPromise, fetchPromise]);
 
@@ -667,6 +677,7 @@
           loadingEl.style.display = 'none';
           mainEl.style.display = 'block';
         } else {
+          console.error("API 回傳格式錯誤：", json);
           throw new Error("API Error");
         }
       } catch (e) {
@@ -687,10 +698,11 @@
           tabs.forEach(t => t.classList.remove('active'));
           tab.classList.add('active');
 
-          // 更新上方地點文字
-          locationNameEl.textContent = CITY_NAMES[cityId] || cityId;
+          // 更新上方地點文字（用氣象局的地名）
+          const displayName = CITY_NAMES[cityId] || cityId;
+          locationNameEl.textContent = displayName;
 
-          // 重新抓該城市未來 3 天的天氣
+          // 重新抓該城市的天氣
           fetchWeather(cityId);
         });
       });
